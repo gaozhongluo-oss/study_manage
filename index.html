@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学习时长记录 · 个人版</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f7cff'/%3E%3Cpath d='M9 21V13m5 8V9m5 12v-5' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ===== 顶部：激励语 + 倒计时 ===== -->
+<header class="topbar">
+  <section class="card quote-card">
+    <div class="card-head">
+      <h2 class="card-title">今日激励</h2>
+      <div class="quote-tools">
+        <label class="font-tool" title="调整激励语字号">
+          <span>字号</span>
+          <input type="range" id="quoteFontRange" min="16" max="56" step="1">
+          <output id="quoteFontValue">28</output>
+        </label>
+        <button class="btn btn-ghost btn-sm" id="quoteReset" type="button" title="恢复默认激励语">重置</button>
+      </div>
+    </div>
+    <div class="quote-text" id="quoteText" contenteditable="true" spellcheck="false"
+         data-placeholder="点击这里写一句给自己的话…"></div>
+    <p class="hint">点击文字即可直接修改，内容与字号会自动保存。</p>
+  </section>
+
+  <section class="card countdown-card">
+    <div class="card-head">
+      <h2 class="card-title">倒计时</h2>
+      <button class="btn btn-ghost btn-sm" id="countdownEdit" type="button">编辑</button>
+    </div>
+    <div class="countdown-body" id="countdownBody">
+      <div class="cd-title" id="cdTitle">—</div>
+      <div class="cd-clock" id="cdClock">--</div>
+      <div class="cd-sub" id="cdSub">点击「编辑」设置名称与目标日期</div>
+    </div>
+    <form class="popover-form" id="countdownForm" hidden>
+      <label>名称
+        <input type="text" id="cdTitleInput" maxlength="30" placeholder="例如：考研初试">
+      </label>
+      <label>目标日期
+        <input type="datetime-local" id="cdTargetInput">
+      </label>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">保存</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="cdCancel">取消</button>
+      </div>
+    </form>
+  </section>
+</header>
+
+<main class="layout">
+
+  <!-- ===== 番茄计时器 ===== -->
+  <section class="card span-12" id="panelTimer">
+    <div class="card-head">
+      <h2 class="card-title">番茄计时 <span class="muted-sm" id="timerRoundHint">专注 5 分钟一轮</span></h2>
+      <div class="head-tools">
+        <label class="timer-dur">每轮时长
+          <select id="timerDuration" class="input input-inline">
+            <option value="5" selected>5 分钟</option>
+            <option value="10">10 分钟</option>
+            <option value="15">15 分钟</option>
+            <option value="25">25 分钟</option>
+            <option value="45">45 分钟</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="timer-body">
+      <div class="timer-left">
+        <span class="field-label">选择学习项目</span>
+        <div class="chips" id="timerProjects"></div>
+        <p class="hint" id="timerToday">今天还没有完成计时</p>
+      </div>
+
+      <div class="timer-right">
+        <div class="timer-clock" id="timerClock">05:00</div>
+        <div class="timer-progress"><span id="timerBar"></span></div>
+        <p class="timer-status" id="timerStatus">选择项目后点「开始计时」</p>
+        <div class="timer-actions">
+          <button class="btn btn-primary" id="timerStart" type="button">开始计时</button>
+          <button class="btn btn-ghost" id="timerStop" type="button" hidden>停止</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 结束提醒：让你在别的软件里也能收到 -->
+    <div class="timer-remind">
+      <span class="field-label" style="margin:0">结束提醒</span>
+      <label class="switch" title="到点弹一个独立的小窗口（全局浮窗，切到别的软件也看得见）">
+        <input type="checkbox" id="timerPopup"><span>全局浮窗</span>
+      </label>
+      <label class="switch" title="到点响铃（浏览器在后台也能响）">
+        <input type="checkbox" id="timerSound"><span>提示音</span>
+      </label>
+      <label class="switch" title="到点弹系统通知（Windows 右下角 / 通知中心）">
+        <input type="checkbox" id="timerNotify"><span>系统通知</span>
+      </label>
+      <button class="btn btn-ghost btn-sm" id="timerTest" type="button" title="立刻试一次提醒">试一下</button>
+      <span class="hint" id="timerNotifyState" style="margin:0"></span>
+    </div>
+
+    <p class="hint">一轮结束后会弹出「是否还在学习？」：10 秒内点「继续」立即开始下一轮，不点则自动结束。
+      每完成一轮，都会用所选项目的颜色写入当天的时间轴；与已有色块重叠时自动合并，不会重复计时长。
+      到点时会同时用<b>全局浮窗 + 系统通知 + 提示音 + 标签页标题/图标闪烁</b>提醒——
+      浮窗是一个独立小窗口，切到别的软件也能看到，而且可以直接在浮窗里点「继续」。</p>
+  </section>
+
+  <!-- ===== 每日时间轴 ===== -->
+  <section class="card span-12" id="panelTimeline">
+    <div class="card-head">
+      <h2 class="card-title">每日时间轴 <span class="muted-sm">6:00 – 24:00</span></h2>
+      <div class="head-tools">
+        <div class="seg" id="tlMode" role="group" aria-label="时间轴视图">
+          <button type="button" class="seg-btn is-active" data-mode="day">单日</button>
+          <button type="button" class="seg-btn" data-mode="week">整周</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 当前所选日期 + 日历调取 -->
+    <div class="tl-dateline">
+      <div class="cal-anchor">
+        <button class="btn btn-soft btn-sm" id="calToggle" type="button" aria-expanded="false">📅 日历</button>
+        <div class="calendar" id="calendar" hidden></div>
+      </div>
+      <span class="tl-dateline-now">当前查看：<b id="tlDateLabel">—</b></span>
+    </div>
+
+    <div class="tl-toolbar">
+      <button class="btn btn-ghost btn-sm" id="tlPrev" type="button" title="前一天 / 前一周">‹</button>
+      <input type="date" id="tlDate" class="input input-date">
+      <button class="btn btn-ghost btn-sm" id="tlNext" type="button" title="后一天 / 后一周">›</button>
+      <button class="btn btn-soft btn-sm" id="tlToday" type="button">回到今天</button>
+      <span class="tl-total" id="tlTotal"></span>
+    </div>
+
+    <div class="tl-legend" id="tlLegend"></div>
+
+    <div class="timeline-wrap">
+      <div class="timeline" id="timeline"></div>
+    </div>
+
+    <p class="hint" id="tlHint">在轨道上按住拖动即可写入一个时间段；拖动色块可整体移动，拖动左右边缘可调整起止；单击色块可修改或删除。</p>
+  </section>
+
+  <!-- ===== 夜间睡眠记录 ===== -->
+  <section class="card span-12" id="panelSleep">
+    <div class="card-head">
+      <h2 class="card-title">睡眠记录 <span class="muted-sm">每晚一条，手动填写</span></h2>
+      <div class="head-tools">
+        <button class="btn btn-ghost btn-sm" id="slPrevMonth" type="button" title="上个月">‹</button>
+        <span class="week-label" id="slMonthLabel">—</span>
+        <button class="btn btn-ghost btn-sm" id="slNextMonth" type="button" title="下个月">›</button>
+        <button class="btn btn-soft btn-sm" id="slThisMonth" type="button">本月</button>
+      </div>
+    </div>
+
+    <div class="sleep-body">
+      <form class="sleep-form" id="sleepForm">
+        <label class="field">入睡当晚
+          <input type="date" id="slDate" class="input">
+        </label>
+        <div class="field-row">
+          <label class="grow">入睡时间
+            <input type="time" id="slBed" class="input" step="300">
+          </label>
+          <label class="grow">起床时间
+            <input type="time" id="slWake" class="input" step="300">
+          </label>
+        </div>
+        <label class="field">备注（可选）
+          <input type="text" id="slNote" class="input" maxlength="40" placeholder="例如：睡得不错 / 半夜醒了">
+        </label>
+        <p class="sleep-dur">本晚睡眠 <b id="slDuration">—</b></p>
+        <div class="form-actions">
+          <button class="btn btn-primary btn-sm" id="slSave" type="submit">保存这一晚</button>
+          <button class="btn btn-danger btn-sm" id="slDelete" type="button" hidden>删除这一晚</button>
+        </div>
+      </form>
+
+      <div class="sleep-chart-wrap">
+        <div class="sleep-chart" id="sleepChart"></div>
+        <div class="chart-foot">
+          <span class="ref-note"><i class="ref-line-demo"></i>虚线为 8 小时参考线</span>
+          <span class="muted-sm" id="slSummary"></span>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint">跨午夜会自动计算（例如 23:30 → 07:00 = 7 小时 30 分）。点柱子可以选中并编辑那一晚；
+      也可以点上面的「📅 日历」切到「🌙 睡眠」，在日历里点某一天直接跳到这晚的柱状图。
+      睡眠是独立统计，不会混进学习时长。</p>
+  </section>
+
+  <!-- ===== 每周统计 ===== -->
+  <section class="card span-7" id="panelWeek">
+    <div class="card-head">
+      <h2 class="card-title">每周统计</h2>
+      <div class="head-tools">
+        <div class="seg" id="statsSource" role="group" aria-label="统计来源">
+          <button type="button" class="seg-btn is-active" data-source="records">学习记录</button>
+          <button type="button" class="seg-btn" data-source="timeline">时间轴</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-toolbar">
+      <button class="btn btn-ghost btn-sm" id="wkPrev" type="button" title="上一周">‹</button>
+      <span class="week-label" id="wkLabel">—</span>
+      <button class="btn btn-ghost btn-sm" id="wkNext" type="button" title="下一周">›</button>
+      <button class="btn btn-soft btn-sm" id="wkThis" type="button">本周</button>
+    </div>
+
+    <div class="summary" id="wkSummary"></div>
+    <div class="chart-host" id="weekChart"></div>
+    <div class="chart-foot">
+      <span class="ref-note"><i class="ref-line-demo"></i>虚线为 6 小时参照线，柱顶数字为与 6 小时目标的差距</span>
+      <span class="click-note">点击柱子可跳到当天的每日时间轴</span>
+    </div>
+    <div class="legend" id="wkLegend"></div>
+  </section>
+
+  <!-- ===== 右列：学习记录 + 学习项目 ===== -->
+  <div class="side-col span-5">
+
+    <section class="card" id="panelRecord">
+      <div class="card-head">
+        <h2 class="card-title" id="recFormTitle">添加学习记录</h2>
+        <button class="btn btn-ghost btn-sm" id="recCancelEdit" type="button" hidden>取消编辑</button>
+      </div>
+
+      <form class="rec-form" id="recForm">
+        <div class="field">
+          <span class="field-label">学习项目</span>
+          <div class="chips" id="recProjectChips"></div>
+        </div>
+
+        <div class="field field-row">
+          <label class="grow">日期
+            <input type="date" id="recDate" class="input">
+          </label>
+          <div class="grow">
+            <span class="field-label">时长</span>
+            <div class="dur-input">
+              <input type="number" id="recHours" class="input" min="0" max="23" step="1" value="1" inputmode="numeric">
+              <span class="unit">小时</span>
+              <input type="number" id="recMinutes" class="input" min="0" max="59" step="5" value="0" inputmode="numeric">
+              <span class="unit">分</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-dur">
+          <button type="button" class="btn btn-soft btn-sm" data-add-min="15">+15 分</button>
+          <button type="button" class="btn btn-soft btn-sm" data-add-min="30">+30 分</button>
+          <button type="button" class="btn btn-soft btn-sm" data-add-min="60">+1 小时</button>
+          <button type="button" class="btn btn-soft btn-sm" data-add-min="120">+2 小时</button>
+        </div>
+
+        <label class="field">备注（可选）
+          <input type="text" id="recNote" class="input" maxlength="60" placeholder="例如：第三章习题 / 单词 200 个">
+        </label>
+
+        <button class="btn btn-primary btn-block" id="recSubmit" type="submit">保存记录</button>
+      </form>
+
+      <div class="rec-list-head">
+        <span id="recListTitle">最近记录</span>
+        <div class="seg seg-sm" id="recFilter" role="group" aria-label="记录筛选">
+          <button type="button" class="seg-btn is-active" data-filter="week">本周</button>
+          <button type="button" class="seg-btn" data-filter="all">全部</button>
+        </div>
+      </div>
+      <ul class="rec-list" id="recList"></ul>
+      <div class="rec-list-foot"><span id="recListSum" class="muted-sm"></span></div>
+    </section>
+
+    <section class="card" id="panelProjects">
+      <div class="card-head">
+        <h2 class="card-title">学习项目 <span class="muted-sm" id="projCount"></span></h2>
+        <button class="btn btn-soft btn-sm" id="projAdd" type="button">+ 新增项目</button>
+      </div>
+      <p class="hint">最多 7 个项目：5 个学习项目 + 上课 / 额外睡眠这类「不计入学习时长」的项目。
+        每行右侧的开关决定它是否计入学习时长（上课、额外睡眠默认关闭）。
+        名称与颜色即改即存，颜色会用于时间轴与图表。</p>
+      <div class="proj-list" id="projList"></div>
+      <div class="proj-allday" id="projTotals"></div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <span>数据保存在本机浏览器（localStorage），刷新或重开都不会丢失。</span>
+  <div class="footer-actions">
+    <button class="btn btn-ghost btn-sm" id="dataExport" type="button">导出 JSON</button>
+    <button class="btn btn-ghost btn-sm" id="dataImport" type="button">导入 JSON</button>
+    <button class="btn btn-ghost btn-sm danger" id="dataReset" type="button">清空数据</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+  </div>
+</footer>
+
+<!-- ===== 时间段编辑器（浮层） ===== -->
+<div class="modal-mask" id="blockModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="blockModalTitle">
+    <button class="modal-close" id="blockClose" type="button" title="关闭" aria-label="关闭">✕</button>
+    <h3 id="blockModalTitle">编辑时间段</h3>
+    <label>项目
+      <div class="chips" id="blockProjectChips"></div>
+    </label>
+    <div class="field-row">
+      <label class="grow">开始
+        <input type="time" id="blockStart" class="input" step="300">
+      </label>
+      <label class="grow">结束
+        <input type="time" id="blockEnd" class="input" step="300">
+      </label>
+    </div>
+    <label>备注（可选）
+      <input type="text" id="blockNote" class="input" maxlength="60" placeholder="例如：数学真题一套">
+    </label>
+    <p class="modal-err" id="blockErr" hidden></p>
+    <div class="form-actions">
+      <button class="btn btn-primary btn-sm" id="blockSave" type="button">保存</button>
+      <button class="btn btn-danger btn-sm" id="blockDelete" type="button">删除</button>
+      <button class="btn btn-ghost btn-sm" id="blockCancel" type="button">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 番茄计时：本轮结束询问（10 秒后自动结束） ===== -->
+<div class="modal-mask" id="timerModal" hidden>
+  <div class="modal timer-modal" role="dialog" aria-modal="true" aria-labelledby="timerModalTitle">
+    <button class="modal-close" id="timerClose" type="button" title="关闭（结束计时）" aria-label="关闭">✕</button>
+    <h3 id="timerModalTitle">本轮结束</h3>
+    <p class="timer-modal-done" id="timerModalDone">—</p>
+    <p class="timer-ask">是否还在学习？</p>
+    <p class="timer-modal-sub">如果不操作，<b id="timerPromptLeft">10 秒</b>后自动结束本轮计时。</p>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="timerContinue" type="button">继续</button>
+      <button class="btn btn-ghost" id="timerEnd" type="button">结束</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<div class="chart-tip" id="chartTip" hidden></div>
+
+<script src="js/util.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/store.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/notify.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
